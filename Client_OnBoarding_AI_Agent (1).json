@@ -1,0 +1,245 @@
+{
+  "name": "Client OnBoarding AI Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Client onboarding AI Agent",
+        "formDescription": "Please fill out the require fields",
+        "formFields": {
+          "values": [
+            { "fieldLabel": "Name", "placeholder": "your name", "requiredField": true },
+            { "fieldLabel": "Father Name", "placeholder": "Your Father Name", "requiredField": true },
+            { "fieldLabel": "Email", "placeholder": "Your Email", "requiredField": true },
+            { "fieldLabel": "Company Industry", "placeholder": "e.g Finance", "requiredField": true },
+            { "fieldLabel": "Goal", "placeholder": "e.g: Increasing revenue", "requiredField": true },
+            { "fieldLabel": "Anything else we should know?", "requiredField": true }
+          ]
+        },
+        "options": {
+          "appendAttribution": true
+        }
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [-420, -180],
+      "id": "NODE_FORM_TRIGGER",
+      "name": "On form submission",
+      "webhookId": "WEBHOOK_ID_PLACEHOLDER"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Create a welcome email using:\n- Name: {{$json[\"Name\"]}}\n- Industry: {{$json[\"Company Industry\"]}}\n- Goal: \"{{$json[\"Goal\"]}}\"\n- Contact Preference: \"{{$json[\"Anything else we should know\"] || 'No special preferences'}}\"\n\nRequirements:\n1. Professional but friendly tone\n2. Address their goal directly\n3. Respect contact restrictions\n4. Signature:\n   \"SM. Director of TechInnovate\n   TechInnovate\"\n\nReturn JSON format:\n{\n  \"subject\": \"Custom subject\",\n  \"body\": \"Email content\",\n  \"email\": \"{{$json[\"Email\"]}}\"\n}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [-60, -380],
+      "id": "NODE_AI_AGENT",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [-60, -200],
+      "id": "NODE_GEMINI",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "GEMINI_API_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            { "content": "parse the json query and output the parameter separately:\nSubject\nBody\nEmail", "role": "system" },
+            { "content": "={{ $json.output }}" }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [280, -380],
+      "id": "NODE_OPENAI_EMAIL",
+      "name": "OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "OPENAI_API_ID",
+          "name": "OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.message.content.Email }}",
+        "subject": "={{ $json.message.content.Subject }}",
+        "emailType": "text",
+        "message": "={{ $json.message.content.Body }}",
+        "options": {
+          "appendAttribution": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [620, -380],
+      "id": "NODE_GMAIL",
+      "name": "Gmail",
+      "webhookId": "GMAIL_WEBHOOK_ID",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GMAIL_OAUTH_ID",
+          "name": "Gmail OAuth Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Take the client information provided and create a summary of their client profile. Here is a client's information:\n\nName:{{ $json.Name }}\nCompany Industry:{{ $json['Company Industry'] }}\nGoal:{{ $json['Goal'] }}\nAdditional Information: {{ $json[\"Anything else we should know?\"] }}\nOutput the following parameters separately:\nName:\nName:{{ $json.Name }}\nEmail:{{ $json.Email }}\nSummary: Summary of the client based on the information",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [-60, -20],
+      "id": "NODE_AI_AGENT_SUMMARY",
+      "name": "AI Agent3"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [-60, 160],
+      "id": "NODE_GEMINI_2",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "GEMINI_API_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            { "content": "Parse the json query into 3 separate fields:\n\nName\nEmail\nSummary", "role": "system" },
+            { "content": "={{ $json.output }}" }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [260, -20],
+      "id": "NODE_OPENAI_SUMMARY",
+      "name": "OpenAI1",
+      "credentials": {
+        "openAiApi": {
+          "id": "OPENAI_API_ID",
+          "name": "OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "New Clients",
+          "cachedResultUrl": "https://docs.google.com/spreadsheet/REDACTED"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheet/REDACTED"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.message.content.Name }}",
+            "Email": "={{ $json.message.content.Email }}",
+            "Summary": "={{ $json.message.content.Summary }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "Name", "displayName": "Name", "type": "string" },
+            { "id": "Email", "displayName": "Email", "type": "string" },
+            { "id": "Summary", "displayName": "Summary", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [620, -20],
+      "id": "NODE_GOOGLE_SHEETS",
+      "name": "Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_OAUTH_ID",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "On form submission": {
+      "main": [
+        [{ "node": "AI Agent3", "type": "main", "index": 0 }, { "node": "AI Agent", "type": "main", "index": 0 }]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]
+      ]
+    },
+    "AI Agent": {
+      "main": [[{ "node": "OpenAI", "type": "main", "index": 0 }]]
+    },
+    "OpenAI": {
+      "main": [[{ "node": "Gmail", "type": "main", "index": 0 }]]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [[{ "node": "AI Agent3", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "AI Agent3": {
+      "main": [[{ "node": "OpenAI1", "type": "main", "index": 0 }]]
+    },
+    "OpenAI1": {
+      "main": [[{ "node": "Google Sheets", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
